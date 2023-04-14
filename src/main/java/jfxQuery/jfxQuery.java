@@ -10,13 +10,12 @@ package jfxQuery;
 
 
 // imports
-
 import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,40 +26,88 @@ import java.util.function.Function;
 
 
 // class
-final public class jfxQuery
-{
+final public class jfxQuery {
 
     private final List<Object> currentMatchingSelection;
 
+    private static Parent defaultParent = null;
 
-    //
-    // class constructors
-    public jfxQuery( String selectorString, Parent parentElement ){
+
+    /**
+     * Main class constructor
+     * */
+    public jfxQuery( String selectorString, Object parentElement ){
         currentMatchingSelection = new ArrayList<>();
 
-        List<jfxQuerySelectors> selectors = jfxQuerySelectors.parse( selectorString );
+        if ( !( parentElement instanceof Parent ) )
+            parentElement = getParentReference( parentElement );
 
-        if ( parentElement == null ){
-            Window window = Stage.getWindows().stream().filter(Window::isShowing).toList().get( 0 );
-            parentElement = window.getScene().getRoot();
+        List<jfxQuerySelectors> selectors = jfxQuerySelectors.parse( selectorString );
+        findMatch( (Parent) parentElement, selectors, 0, true );
+
+    }
+
+
+    /**
+     * Overloaded version supporting direct calls for the current stage
+     * */
+    public jfxQuery( String selectorString ){ this( selectorString, null ); }
+
+
+    /**
+     * Overloaded version supporting a single object (direct access)
+     * */
+    public jfxQuery( Object object ){ currentMatchingSelection = List.of(object); }
+
+
+    /**
+     * Overloaded version supporting arrays of generics
+     * */
+    public <T> jfxQuery( T[] array ){ currentMatchingSelection = List.of(array); }
+
+
+    /**
+     * Returns the default parent to be used as a reference for string selectors
+     * */
+    private Parent getParentReference( Object parentObject ){
+
+        // Identifies the kind of object passed as a parent
+        if ( parentObject != null ){
+            if ( parentObject instanceof Window ref )
+                parentObject = ref.getScene().getRoot();
+
+            else if ( parentObject instanceof Scene ref )
+                parentObject = ref.getRoot();
+
+            else if ( !( parentObject instanceof Parent ) )
+                parentObject = null;
+
+            if ( defaultParent == null ) defaultParent = (Parent) parentObject;
         }
 
-        findMatch( parentElement, selectors, 0, true );
+        if ( defaultParent == null ){
+
+            List<Window> windows = Stage.getWindows();
+            if ( windows.size() == 0 )
+                throw new RuntimeException("No Stage shown during a jfxQuery selector by String");
+
+            // defaults to the main stage
+            Window window = windows.get(0);
+
+            // tries to identify the first visible one
+            List<Window> visibleWindows = windows.stream().filter(Window::isShowing).toList();
+            if (visibleWindows.size() > 0) window = visibleWindows.get(0);
+
+            parentObject = defaultParent = window.getScene().getRoot();
+
+        }
+
+        else if ( parentObject == null )
+            parentObject = defaultParent;
+
+        return (Parent) parentObject;
     }
 
-    public jfxQuery( String selectorString ){
-        this(selectorString, null);
-    }
-
-
-    public jfxQuery( Object object ){
-        currentMatchingSelection = List.of(object);
-    }
-
-
-    public <T> jfxQuery( T[] array ){
-        currentMatchingSelection = List.of(array);
-    }
 
 
     //

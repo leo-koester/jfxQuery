@@ -1,11 +1,15 @@
 package jfxQuery;
 
-import javafx.scene.Node;
 
 public interface jfxQueryShorthand {
 
 
     default jfxQuery $( String selectors ){ return new jfxQuery(selectors); }
+
+
+    default jfxQuery $( String selectors, Object parentElement ){
+        return new jfxQuery(selectors, parentElement );
+    }
 
 
     default jfxQuery $( Object node ){ return new jfxQuery(node); }
